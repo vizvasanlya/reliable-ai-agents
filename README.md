@@ -15,48 +15,46 @@ A **background agent daemon** that:
 2. Plans the work using LLM reasoning
 3. Generates real code using language models
 4. Verifies output (syntax, security, tests)
-5. Reports results when done
+5. Self-corrects when errors occur
 6. Learns from mistakes across sessions
+7. Reads existing project context before generating
 
 ## Project Structure
 
 ```
 reliable-ai-agents/
-├── docs/
-│   ├── VISION.md              # What we're building and why
-│   └── DEVELOPMENT_PLAN.md    # Phased implementation plan
 ├── src/
-│   ├── tools/                 # Agent's hands (file ops, shell, search)
-│   ├── memory/                # Agent's brain (persistent learning)
-│   ├── planning/              # Agent's strategy (task decomposition)
-│   ├── llm/                   # LLM integration (brain)
-│   ├── execution/             # Agent's action (running tasks)
-│   ├── verification/          # Agent's quality control
-│   ├── agent/                 # Integration (loop, session, trust)
-│   └── cli.py                 # CLI entry point + daemon
-├── tests/                     # 112 tests
-└── examples/                  # Working examples
+│   ├── agent/
+│   │   ├── self_correction.py   # Auto-fix loop (up to 5 attempts)
+│   │   ├── learning.py          # Real-time learning from errors
+│   │   ├── cross_session.py     # Persistent learning across sessions
+│   │   ├── context.py           # Read existing project before generating
+│   │   ├── project_builder.py   # Multi-file project generation
+│   │   ├── error_analyzer.py    # Deep error analysis and fix suggestions
+│   │   ├── loop.py              # Main agent control loop
+│   │   ├── session.py           # Session management
+│   │   └── trust.py             # Trust tracking
+│   ├── llm/
+│   │   ├── provider.py          # OpenCode Zen (Big Pickle, MiMo)
+│   │   ├── planner.py           # LLM-powered task planning
+│   │   └── coder.py             # Real code generation
+│   ├── tools/                   # File ops, shell, search
+│   ├── memory/                  # Persistent storage
+│   ├── planning/                # Task decomposition
+│   ├── execution/               # Task runner, error handler
+│   ├── verification/            # Syntax, security, confidence
+│   ├── cli.py                   # CLI interface
+│   ├── daemon.py                # Background daemon
+│   └── process_task.py          # Task processor
+├── tests/                       # 136 tests
+└── docs/                        # Vision and development plan
 ```
-
-## Implementation Status
-
-| Module | Status | Tests | What It Does |
-|--------|--------|-------|--------------|
-| Tools | Complete | 18/18 | Read/write/edit files, run commands, search |
-| Memory | Complete | 23/23 | Persistent storage, error tracking, sessions |
-| Planning | Complete | 17/17 | Intent parsing, task decomposition, scheduling |
-| LLM Planner | Complete | 9/9 | LLM-powered smart task planning |
-| LLM Coder | Complete | 7/7 | Real code generation using language models |
-| Execution | Complete | 10/10 | Task execution, error handling, progress |
-| Verification | Complete | 15/15 | Syntax checking, security scanning, confidence |
-| Agent Loop | Complete | 13/13 | Main control: Plan → Execute → Verify → Learn |
-| **Total** | **Complete** | **112/112** | |
 
 ## How To Use
 
 ### Submit a task
 ```bash
-python src/cli.py submit "Build a REST API for user management"
+python src/cli.py submit "Build a REST API for user management" -p ./my-project
 ```
 
 ### Check status
@@ -64,9 +62,9 @@ python src/cli.py submit "Build a REST API for user management"
 python src/cli.py status <task_id>
 ```
 
-### Get result
+### Start daemon (background processing)
 ```bash
-python src/cli.py result <task_id>
+python src/daemon.py start
 ```
 
 ### View history
@@ -74,118 +72,83 @@ python src/cli.py result <task_id>
 python src/cli.py history
 ```
 
-### Start daemon (background processing)
-```bash
-python src/cli.py daemon start
+## Features
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| CLI Interface | Done | Submit tasks, check status, view history |
+| LLM Integration | Done | Big Pickle via OpenCode Zen (free) |
+| Code Generation | Done | Real code from natural language |
+| Self-Correction | Done | Auto-fix up to 5 attempts |
+| Learning | Done | Learn from every error |
+| Cross-Session Learning | Done | Persist lessons across sessions |
+| Project Context | Done | Read existing code before generating |
+| Multi-File Projects | Done | Generate complete project structures |
+| Error Analysis | Done | Deep error analysis with fix suggestions |
+| Background Daemon | Done | Run as background service |
+| Syntax Checking | Done | Validate Python/JSON/JS |
+| Security Scanning | Done | Detect vulnerabilities |
+| Trust System | Done | Track reliability over time |
+
+## Test Results
+
+```
+Tools:        18/18 passing
+Memory:       23/23 passing
+Planning:     17/17 passing
+LLM:          16/16 passing
+Execution:    10/10 passing
+Verification: 15/15 passing
+Agent Loop:   13/13 passing
+Self-Correction: 10/10 passing
+New Features: 14/14 passing
+─────────────────────────────
+Total:       136/136 passing
 ```
 
-### Stop daemon
-```bash
-python src/cli.py daemon stop
+## Real-World Demo
+
+```
+$ python src/cli.py submit "Build a Book Library API with SQLAlchemy..."
+
+Processing...
+  Step 1: Reading project context...
+  Step 2: Loading learned lessons... (applying 3 lessons)
+  Step 3: Planning project structure... (5 files)
+  Step 4: Writing files...
+  Step 5: Verifying syntax... (PASS)
+  Step 6: Running tests... (25/25 PASS)
+
+RESULT: SUCCESS
 ```
 
-## CLI Commands
+## Quick Start
 
-| Command | Description |
-|---------|-------------|
-| `submit <task>` | Submit a new task |
-| `status <id>` | Check task status |
-| `result <id>` | Get task result |
-| `history` | Show all tasks |
-| `memory` | Show memory stats |
-| `trust` | Show trust level |
-| `daemon start` | Start background worker |
-| `daemon stop` | Stop background worker |
+```bash
+# 1. Clone the repo
+git clone https://github.com/vizvasanlya/reliable-ai-agents.git
+cd reliable-ai-agents
+
+# 2. Set your API key (free from opencode.ai)
+set ZEN_API_KEY=your-key-here
+
+# 3. Submit a task
+python src/cli.py submit "Build me a REST API" -p ./my-project
+
+# 4. Or start the daemon
+python src/daemon.py start
+```
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                    USER SUBMITS TASK                 │
-│         python cli.py submit "Build auth API"       │
-└─────────────────────┬───────────────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────────────┐
-│                  AGENT DAEMON                        │
-│                                                      │
-│  ┌──────────┐   ┌──────────┐   ┌──────────┐        │
-│  │   LLM    │   │  Tools   │   │  Memory  │        │
-│  │  (Brain) │   │  (Hands) │   │ (Learn)  │        │
-│  └────┬─────┘   └────┬─────┘   └────┬─────┘        │
-│       │              │              │                │
-│       ▼              ▼              ▼                │
-│  ┌──────────────────────────────────────────┐      │
-│  │            Agent Loop                     │      │
-│  │  Plan → Execute → Verify → Learn         │      │
-│  └──────────────────────────────────────────┘      │
-│                                                      │
-└─────────────────────┬───────────────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────────────┐
-│                 RESULT DELIVERED                     │
-│  "Done. 5/5 tasks completed. Confidence: 94%"       │
-└─────────────────────────────────────────────────────┘
+Request → Context Reader → Learning System → Project Builder
+    ↓                                               ↓
+Error Analyzer ← Self-Correction Loop ← Code Generator
+    ↓                                               ↓
+Verification Layer → Tests → Fix? → Retry → Done
 ```
 
-## What Each Component Does
+## License
 
-### LLM Brain
-- `LLMProvider` — Interface to OpenAI, Anthropic, or mock
-- `LLMPlanner` — Uses LLM to break down tasks intelligently
-- `LLMCoder` — Generates real code, fixes bugs, writes tests
-
-### Tools (Hands)
-- `read_file` / `write_file` / `edit_file` — File operations
-- `run_command` — Execute shell commands
-- `grep` / `glob` — Search codebases
-
-### Memory (Learning)
-- `MemoryStore` — Persistent key-value storage
-- `ErrorTracker` — Record and retrieve error patterns
-- `SessionMemory` — Track current session
-
-### Verification (Quality)
-- `SyntaxChecker` — Validate code syntax
-- `SecurityScanner` — Detect vulnerabilities
-- `ConfidenceScorer` — Rate output quality
-
-## Quick Start
-
-```python
-from src.llm.provider import create_provider
-from src.llm.planner import LLMPlanner
-from src.llm.coder import LLMCoder
-
-# Create LLM provider (auto-detects API keys)
-provider = create_provider("auto")
-
-# Plan a task
-planner = LLMPlanner(provider)
-tasks = planner.plan("Build a user authentication system")
-print(f"Created {len(tasks)} tasks")
-
-# Generate code
-coder = LLMCoder(provider)
-code = coder.generate_file("Implement login function", "auth.py", "python")
-print(code)
-```
-
-## Tests
-
-```bash
-python tests/test_tools.py        # 18 tests
-python tests/test_memory.py       # 23 tests
-python tests/test_planning.py     # 17 tests
-python tests/test_llm.py          # 16 tests
-python tests/test_execution.py    # 10 tests
-python tests/test_verification.py # 15 tests
-python tests/test_agent.py        # 13 tests
-```
-
-## What's Next
-
-1. **Package as installable CLI** — `pip install reliable-agent`
-2. **Web dashboard** — Monitor tasks in browser
-3. **Multi-project support** — Handle concurrent projects
-4. **Plugin system** — Extend with custom tools
-5. **Team collaboration** — Multiple agents working together
+MIT
